@@ -60,6 +60,8 @@ void *malloc2(size_t size) {
 		EOheap = (void*)aligned((size_t)sbrk(0)); //node + heapsiz;
 	
 		/* Return the aligned address at which alloc'd stuff is */
+		printf("%p\n", (void*)((char*)node + nodesiz));
+		printf("%p\n", aligned((nodep)((char*)node + nodesiz))); //why cast it to nodep, can just have nodep take in char*
 		return (void*)aligned((size_t)node + nodesiz);
 		}
 
@@ -102,6 +104,18 @@ void *malloc2(size_t size) {
 	node = newnode;
 	return (void*)aligned((size_t)node + nodesiz);
 	// TODO: GENERAL CASE: call sbrk again to make space. How to handle sbrk failure?
+}
+
+
+void free2(nodep ptr) {	
+	//find ptr-> prev (should get us to previous node), update that previous node's next pointer to whatever ptr-> nxt is //
+	ptr->prev->next = ptr->next;
+
+	//find ptr->next (should get us to next node), updated that next node's prev pointer to whatever ptr->prev is //
+	ptr->next->prev = ptr->prev;
+
+	//memset from node (aligned) forward till forward
+	memset(ptr, 0, aligned(ptr->size));
 }
 
 int main(int argc, char *argv[]) {
