@@ -8,16 +8,16 @@
 #include <stdint.h>
 
 /* Linked List Metadata - 12 bytes (doubles are 8, pointers are 8 for 64-bit machines) */
-typedef struct {
+typedef struct alloc {
 	
 	/* Size of the thing we have allocated. Does not include padding. */
 	size_t size;
 
 	/* Pointer to the previous malloc'd thing's node */
-	struct nodep *prev;
+	struct alloc *prev;
 
 	/* Pointer to the next malloc'd thing's node */
-	struct nodep *next;
+	struct alloc *next;
 } *nodep;
 
 /* When we malloc for the first time, there are no nodes initially and we want to save size of node so we don't call sizeof() excessively */
@@ -26,14 +26,14 @@ static int nodesiz = sizeof(nodep);
 
 /* Information about our heap size, and future var for tracking end of heap */
 static int heapsiz = 2048;
-static int EOheap;
+static void* EOheap;
 
 /* Function to align input address to the next 16 byte aligned address */
 void *aligned (nodep node) { //TODO: FINISH THE REST
 	int toAdd = 0;
 	if((uintptr_t)node % 16 != 0) {
 	toAdd = 16 - (uintptr_t)node % 16;
-	return (void*)(nodep)node + toAdd;
+	return (void*)((nodep)node + toAdd);
 }
 
 /* The malloc() function allocates size bytes and returns a pointer
@@ -51,9 +51,11 @@ void *malloc(size_t size) {
 	if(node == NULL) {
 
 		/* move program break _x_ bytes: Initial memory allocation w/ syscall; sbrk() returns pointer to start of newly allocated memory */
-		if ((node = aligned(sbrk(heapsiz))) < 0) {	//TODO: is sbrk aligned?
-			return -1;
-		}
+		
+		node = sbrk(heapsiz);
+		//if (node = aligned(sbrk(heapsiz))) {	//TODO: is sbrk aligned?
+		//	return NULL;
+		//}
 		node->size = size;
 		node->prev = NULL;
 		node->next = NULL;
@@ -189,11 +191,10 @@ void *malloc(size_t size) {
 //	 
 //// }
 //
-//int main(int argc, char *argv[]) {
-//	//printf("work");
-//	printf(HEAD);
-//	//printf("fake news");
-//}
+int main(int argc, char *argv[]) {
+	//int *num = malloc(1000);
+	return;
+}
 //
 //
 //
@@ -213,20 +214,3 @@ void *malloc(size_t size) {
 //// //free should get rid of data in this node ? (meset?)
 //
 //// //eventually wanna put stuff back in this area that was freed
-
-int main() {
-    int intValue = 42;
-    int* intPtr = &intValue;
-
-    // Convert the pointer to an integer using uintptr_t
-    //uintptr_t uintptrValue = (uintptr_t)intPtr;
-
-    // Apply modulo operation
-    //uintptr_t moduloResult = uintptrValue % 10;  // Replace 10 with your desired divisor
-
-    //printf("Original int value: %d\n", intValue);
-    //printf("Pointer value as integer: %lu\n", uintptrValue);
-    //printf("Result after applying modulo: %lu\n", moduloResult);
-
-    return 0;
-}
