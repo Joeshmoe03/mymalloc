@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 /* Linked List Metadata - 12 bytes (doubles are 8, pointers are 8 for 64-bit machines) */
 typedef struct alloc {
@@ -60,8 +61,6 @@ void *malloc2(size_t size) {
 		EOheap = (void*)aligned((size_t)sbrk(0)); //node + heapsiz;
 	
 		/* Return the aligned address at which alloc'd stuff is */
-		printf("%p\n", (void*)((char*)node + nodesiz));
-		printf("%p\n", aligned((nodep)((char*)node + nodesiz))); //why cast it to nodep, can just have nodep take in char*
 		return (void*)aligned((size_t)node + nodesiz);
 		}
 
@@ -107,15 +106,17 @@ void *malloc2(size_t size) {
 }
 
 
-void free2(nodep ptr) {	
+void free2(void* ptr) {	
 	//find ptr-> prev (should get us to previous node), update that previous node's next pointer to whatever ptr-> nxt is //
-	ptr->prev->next = ptr->next;
+	// nodep node = (nodep)ptr;
+	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
+	node->prev->next = node->next;
 
-	//find ptr->next (should get us to next node), updated that next node's prev pointer to whatever ptr->prev is //
-	ptr->next->prev = ptr->prev;
+	//find ptr->next (should get ums to next node), updated that next node's prev pointer to whatever ptr->prev is //
+	node->next->prev = node->prev;
 
 	//memset from node (aligned) forward till forward
-	memset(ptr, 0, aligned(ptr->size));
+	memset(node, 0, aligned(node->size));
 }
 
 int main(int argc, char *argv[]) {
@@ -125,6 +126,7 @@ int main(int argc, char *argv[]) {
 	malloc2(100);
 	malloc2(1000);
 	malloc2(10000);
+	free2((void*)nump);
 	return 0;
 }
 
