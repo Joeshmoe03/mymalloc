@@ -67,7 +67,7 @@ void *malloc2(size_t size) {
 
 	/* If empty, initialize alloc list, 2 NODES, INITIAL and newnode; inside this if, work with INITIAL, outside use newnode */
 	if(node == NULL) {
-		
+				
 		/* If is our first time using malloc */
 		if(heapstart == NULL) {
 			sbrkval = (intptr_t)sbrk(aligned(heapsiz));
@@ -90,6 +90,7 @@ void *malloc2(size_t size) {
 		/* Create the node and set the node metadata */
 		node = (nodep)aligned((intptr_t)heapstart);
 		node = createnode(NULL, node, size);
+		head = node;
 
 		/* Calculate the end of the brk */
 		EOheap = aligned((intptr_t)sbrk(0));
@@ -210,15 +211,16 @@ int main(int argc, char *argv[]) {
 	// char* charp0 = malloc2(5000);
 	// free2(charp);
 	// free2(charp0);
-	int* a = (int*)calloc2(4,sizeof(int));
-	a[0] = 1;
-	a[1] = 2;
-	a[2] = 3;
-	a[3] = 4;
-	printf("The numbers entered are: ");
-   	for(int i = 0 ; i < 4 ; i++ ) {
-      printf("%d\n", a[i]);
-    }
+	
+	//int* a = (int*)calloc2(4,sizeof(int));
+	//a[0] = 1;
+	//a[1] = 2;
+	//a[2] = 3;
+	//a[3] = 4;
+	//printf("The numbers entered are: ");
+   	//for(int i = 0 ; i < 4 ; i++ ) {
+    //  //printf("%d\n", a[i]);
+    //}
 
 	/* being overwritten weird */
 	char* letters = malloc2(5); 
@@ -226,14 +228,14 @@ int main(int argc, char *argv[]) {
 	strcpy(letters, "HAHA");
 	strcpy(letters2, "nooo");
 	/* same addres for some reason */
-	printf("%p\n", letters);
-	printf("%p\n", letters2);
+	printf("%d\n", letters);
+	printf("%d\n", letters2);
 	// letters = realloc2(letters, 1000);
 	// strcpy(letters, "HAHAHAHAHA");
 
 	
-	printf("%s\n", letters);
-	printf("%s\n", letters2);
+	//printf("%s\n", letters);
+	//printf("%s\n", letters2);
 
 	return 0;
 }
