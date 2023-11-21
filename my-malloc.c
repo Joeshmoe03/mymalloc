@@ -144,11 +144,29 @@ void *calloc2(size_t nmemb, size_t size) {
 	memset((void*)aligned((intptr_t)node + nodesiz), 0, node->size);
 
 	/* if malloc fails, so will calloc */
-	if(malloc2 == NULL) {
+	if(malloc2(sizeneeded) == NULL) {
 		return NULL;
 	}
 
 	return (void*)aligned((intptr_t)node + nodesiz);
+}
+
+void free2(void* ptr) {
+	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
+	if(ptr != NULL){
+		/* find node-> prev (should get us to previous node), update that previous node's next pointer to whatever node->nxt is */
+		if(node->prev != NULL) {
+			node->prev->next = node->next;
+		} else {
+			head = NULL;
+		}
+		
+		/* find node->next (should get us to next node), updated that next node's prev pointer to whatever node->prev is */
+		if(node->next != NULL) {
+			node->next->prev = node->prev;
+		}
+	}
+	return;
 }
 
 void *realloc2(void *ptr, size_t size) {
@@ -181,24 +199,6 @@ void *realloc2(void *ptr, size_t size) {
 	return newalloc;
 }
 
-void free2(void* ptr) {
-	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
-	if(ptr != NULL){
-		/* find node-> prev (should get us to previous node), update that previous node's next pointer to whatever node->nxt is */
-		if(node->prev != NULL) {
-			node->prev->next = node->next;
-		} else {
-			head = NULL;
-		}
-		
-		/* find node->next (should get us to next node), updated that next node's prev pointer to whatever node->prev is */
-		if(node->next != NULL) {
-			node->next->prev = node->prev;
-		}
-	}
-	return;
-}
-
 int main(int argc, char *argv[]) {
 	// int* nump = malloc2(sizeof(int));
 	// printf("%p\n", nump);
@@ -222,6 +222,7 @@ int main(int argc, char *argv[]) {
 
 	char* letters = malloc2(5);
 	letters = realloc2(letters, 10);
+	printf("%p\n", letters);
 
 	return 0;
 }
