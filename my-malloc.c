@@ -141,19 +141,18 @@ void *calloc2(size_t nmemb, size_t size) {
 	/* integer overflow case */
 	if(__builtin_mul_overflow(nmemb, size, &sizeneeded)) {
 		return NULL;
-		//set errno?
-		printf("this works?!");
 	}
-	nodep node = (nodep)((size_t)malloc2(sizeneeded) - aligned(nodesiz)); 
-
-	/* The memory is set to zero */
-	memset((void*)aligned((intptr_t)node + nodesiz), 0, node->size);
+	void *newalloc = malloc2(sizeneeded);
 
 	/* if malloc fails, so will calloc */
-	if(malloc2(sizeneeded) == NULL) {
+	if(newalloc == NULL) {
 		return NULL;
 	}
 
+	nodep node = (nodep)((intptr_t)newalloc - aligned(nodesiz)); 
+
+	/* The memory is set to zero */
+	memset((void*)aligned((intptr_t)node + nodesiz), 0, node->size);
 	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
@@ -178,15 +177,17 @@ void free2(void* ptr) {
 
 void *realloc2(void *ptr, size_t size) {
 	if(ptr == NULL) {
-		malloc2(size);
+		return malloc2(size);
 	}
 	if(size == 0) {
 		free2(ptr);
+		return NULL;
 	}
-	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
+	
+	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	
 	/* new size < old size */
-	if(size < node->size) {
+	if(size <= node->size && size != 0) {
 		node->size = size;
 		return ptr;
 	}
@@ -200,7 +201,11 @@ void *realloc2(void *ptr, size_t size) {
 	}
 
 	/* adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
-	void* newalloc = malloc2(size); //TODO: do null checking all in one line
+	void* newalloc = malloc2(size);
+	/* if malloc fails, so will realloc */
+	if(newalloc == NULL) {
+		return NULL;
+	}
 	memcpy(newalloc, ptr, node->size);
 	free2(ptr);
 	return newalloc;
@@ -219,14 +224,14 @@ int main(int argc, char *argv[]) {
 	// free2(charp0);
 	
 	int* a = (int*)calloc2(4,sizeof(int));
-	//a[0] = 1;
-	//a[1] = 2;
-	//a[2] = 3;
-	//a[3] = 4;
-	//printf("The numbers entered are: ");
-   	//for(int i = 0 ; i < 4 ; i++ ) {
-    //  //printf("%d\n", a[i]);
-    //}
+	a[0] = 1;
+	a[1] = 2;
+	a[2] = 3;
+	a[3] = 4;
+	printf("The numbers entered are: ");
+   	for(int i = 0 ; i < 4 ; i++ ) {
+     //printf("%d\n", a[i]);
+    }
 
 	/* being overwritten weird */
 	char* letters = malloc2(5); 
