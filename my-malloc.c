@@ -177,7 +177,7 @@ void *realloc2(void *ptr, size_t size) {
 	/* Case 2b: adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
 	void* newalloc = malloc2(size);
 	memcpy(newalloc, ptr, node->size);
-	free(ptr);
+	free2(ptr);
 	return newalloc;
 }
 
@@ -219,6 +219,10 @@ int main(int argc, char *argv[]) {
    	for(int i = 0 ; i < 4 ; i++ ) {
       printf("%d", a[i]);
     }
+
+	char* letters = malloc2(5);
+	letters = realloc2(letters, 10);
+
 	return 0;
 }
 
