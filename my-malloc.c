@@ -136,32 +136,50 @@ void *malloc2(size_t size) {
 void *calloc2(size_t nmemb, size_t size) {
 	/* integer overflow case */
 
-	/*allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
+	/* allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
 	size_t sizeneeded = nmemb * size;
-	nodep node = (nodep)((size_t)malloc(sizeneeded) - aligned(nodesiz)); 
+	nodep node = (nodep)((size_t)malloc2(sizeneeded) - aligned(nodesiz)); 
 
 	/* The memory is set to zero */
-	memset(node, 0, node->size);
+	memset((void*)aligned((intptr_t)node + nodesiz), 0, node->size);
 
-	return node;
+	/* if malloc fails, so will calloc */
+	if(malloc2 == NULL) {
+		return NULL;
+	}
+
+	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
-// void *realloc2(void *ptr, size_t size) {
-// 	if(ptr == NULL) {
-// 		malloc2(size);
-// 	}
+void *realloc2(void *ptr, size_t size) {
+	if(ptr == NULL) {
+		malloc2(size);
+	}
+	if(size == 0) { //implied: && ptr != NULL
+		free2(ptr);
+	}
+	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
+	
+	/* Case 1: new size < old size */
+	if(size < node->size) {
+		node->size = size;
+		return ptr;
+	}
 
-// 	if(size == 0) { //implied: && ptr != NULL
-// 		free2(ptr);
-// 	}
+	/* Case 2: new size > old size */
 
-// 	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
-// 	//should call malloc(size);
+	/* Case 2a: adjacent memory is free, just "extend" old alloc */
+	if(((intptr_t)node->next - aligned(aligned((intptr_t)node + nodesiz) + node->size) > aligned(size - node->size))) { //CHECK CALC.
+		node->size = size;
+		return ptr;
+	}
 
-// 	//start->old unchanged, use memset for this? gotta copy
-// 	memset()
-
-// }
+	/* Case 2b: adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
+	void* newalloc = malloc2(size);
+	memcpy(newalloc, ptr, node->size);
+	free(ptr);
+	return newalloc;
+}
 
 void free2(void* ptr) {
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
