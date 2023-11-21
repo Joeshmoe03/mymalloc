@@ -189,7 +189,7 @@ void *realloc2(void *ptr, size_t size) {
 	/* last node */
 	if(node->next == NULL) {
 		/*if our realloc tries to go beyond program break, copy case*/
-		if(aligned(node + nodesiz) + size > EOheap) {
+		if(aligned((intptr_t)node + nodesiz) + size > EOheap) {
 			newalloc = malloc2(size);
 			if(newalloc == NULL) {
 				return NULL;
@@ -226,14 +226,14 @@ size_t malloc_usable_size(void *ptr) {
 	if(ptr == NULL) {
 		return 0;
 	}
-	
+
 	/* last node, use the program break(EOheap) */
 	if(node->next == NULL) {
-		return (size_t)(EOheap - aligned(node + nodesiz));
+		return (size_t)(EOheap - aligned((intptr_t)node + nodesiz));
 	}
 	
 	/* in between nodes, use beggining of chunk */
-	return (size_t)((intptr_t)node->next - aligned(node + nodesiz));
+	return (size_t)((intptr_t)node->next - aligned((intptr_t)node + nodesiz));
 }
 
 int main(int argc, char *argv[]) {
