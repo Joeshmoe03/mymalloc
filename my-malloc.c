@@ -23,15 +23,16 @@ typedef struct alloc {
 
 /* When we malloc for the first time, there are no nodes initially and we want to save size of node so we don't call sizeof() excessively */
 static nodep head = NULL;
-static size_t nodesiz = sizeof(struct alloc);
+static void* heapstart = NULL;
+static intptr_t nodesiz = (intptr_t)sizeof(struct alloc);
 
 /* Information about our heap size, and future var for tracking end of heap */
 static intptr_t heapsiz = 2048;
-static void* EOheap;
+static intptr_t EOheap;
 
 /* SEE: `http://dmitrysoshnikov.com/compilers/writing-a-memory-allocator */
-size_t aligned(size_t n) {
-	size_t alignment = 16;
+intptr_t aligned(intptr_t n) {
+	intptr_t alignment = 16;
 	return ((n + alignment - 1) & ~(alignment - 1));
 }
 
@@ -56,9 +57,10 @@ nodep createnode(nodep oldnode, nodep newnode, size_t size) {
  * to the allocated memory.  The memory is not initialized.  If size
  * is 0, then malloc() returns a unique pointer value that can later
  * be successfully passed to free(). */
-void *malloc2(size_t size) { //TODO: HANDLE MALLOC(0) + HANDLE IF FIRST MALLOC IS HUGE
-	size_t heapspace;
+void *malloc2(size_t size) {
+	intptr_t heapspace;
 	nodep newnode;
+	intptr_t sbrkval;
 
 	/* We start at our head of the DLL */
 	nodep node = head;
@@ -66,66 +68,78 @@ void *malloc2(size_t size) { //TODO: HANDLE MALLOC(0) + HANDLE IF FIRST MALLOC I
 	/* If empty, initialize alloc list, 2 NODES, INITIAL and newnode; inside this if, work with INITIAL, outside use newnode */
 	if(node == NULL) {
 		
-		/* If heapsiz is smaller than what I want to malloc, increase it */
-		if((size_t)heapsiz < size) {
-			heapsiz = (intptr_t)(aligned(size));
+		/* If is our first time using malloc */
+		if(heapstart == NULL) {
+			sbrkval = (intptr_t)sbrk(aligned(heapsiz));
+			if(sbrkval < 0) {
+				return NULL;
+			}
+			heapstart = (void*)aligned(sbrkval);
 		}
 
-		/* move program break _x_ bytes: Initial memory allocation w/ syscall; sbrk() returns pointer to start of newly allocated memory */
-		size_t sbrkresult = (size_t)sbrk(heapsiz);
-		
-		/* Handle situation of sbrk failure */
-		if(sbrkresult < 0) {
-			return NULL;
+		/* If heapsiz is smaller than what I want to malloc, increase it */
+		if(heapsiz < size) {
+			sbrkval = (intptr_t)sbrk(aligned(size));
+			if(sbrkval < 0) {
+				return NULL;
+			}
+			sbrkval = (intptr_t)sbrk(0);
+			heapsiz = (intptr_t)sbrkval;	
 		}
 		
 		/* Create the node and set the node metadata */
-		node = (nodep)aligned(sbrkresult);
+		node = (nodep)aligned((intptr_t)heapstart);
 		node = createnode(NULL, node, size);
 
 		/* Calculate the end of the brk */
-		EOheap = (void*)aligned((size_t)sbrk(0));
+		EOheap = aligned((intptr_t)sbrk(0));
 	
 		/* Return the aligned address at which alloc'd stuff is */
-		return (void*)(aligned((size_t)node + nodesiz));
+		return (void*)(aligned((intptr_t)node + nodesiz));
 	}
 
 	/* We already have some thing malloc'd so lets just traverse the DLL until we find next available spot */
 	while(node->next != NULL) {
-		heapspace = (size_t)node->next - aligned(aligned((size_t)node + nodesiz) + node->size);
-		if(heapspace >= aligned(nodesiz) + aligned(size)) {
+		heapspace = (intptr_t)node->next - aligned(aligned((intptr_t)node + nodesiz) + node->size);
+		if(heapspace >= aligned(nodesiz) + aligned((intptr_t)size)) {
 
 			/* Create node and metadata if can fit it in */
-			newnode = (nodep)aligned(aligned((size_t)node + nodesiz) + node->size);
+			newnode = (nodep)aligned(aligned((intptr_t)node + nodesiz) + node->size);
 			newnode = createnode(node, newnode, size);
 			node = newnode;
-			return (void*)aligned((size_t)node + nodesiz);
+			return (void*)aligned((intptr_t)node + nodesiz);
 		}
 		node = node->next;
 	}
-	heapspace = (size_t)EOheap - aligned(aligned((size_t)node + nodesiz) + node->size);
+	heapspace = EOheap - aligned(aligned((intptr_t)node + nodesiz) + node->size);
 		
 	/* If there is enough space after last node to shove before brk and fill metadata of node */
 	if(heapspace >= (aligned(nodesiz) + aligned(size))) {
-		newnode = (nodep)aligned(aligned((size_t)node + nodesiz) + node->size);
+		newnode = (nodep)aligned(aligned((intptr_t)node + nodesiz) + node->size);
 		newnode = createnode(node, newnode, size);
 		node = newnode;
-		return (void*)aligned((size_t)node + nodesiz);
+		return (void*)aligned((intptr_t)node + nodesiz);
 	}
 
 	/* increment brk by current sbrksiz + size * 2, and fill metadata */
-	heapsiz = (heapsiz + (intptr_t)size) * 2;
-	newnode = (nodep)aligned((size_t)sbrk(heapsiz));
+	heapsiz = (heapsiz + size) * 2;
+	sbrkval = (intptr_t)sbrk(aligned(heapsiz));
+	if(sbrkval < 0) {
+		return NULL;
+	}
+	newnode = (nodep)aligned(sbrkval);
 	newnode = createnode(node, newnode, size);
 	node = newnode;
-	return (void*)aligned((size_t)node + nodesiz);
+	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
 void free2(void* ptr) {
 	/* find ptr-> prev (should get us to previous node), update that previous node's next pointer to whatever ptr-> nxt is */
-	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
+	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	if(node->prev != NULL) {
 		node->prev->next = node->next;
+	} else {
+		head = NULL;
 	}
 	
 	/* find ptr->next (should get ums to next node), updated that next node's prev pointer to whatever ptr->prev is */
@@ -136,12 +150,16 @@ void free2(void* ptr) {
 }
 
 int main(int argc, char *argv[]) {
-	int* nump = (int*)malloc2(sizeof(int));
+	int* nump = malloc2(sizeof(int));
+	printf("%p\n", nump);
 	*nump = 11023912;
-	malloc2(100);
-	malloc2(1000);
-	malloc2(10000);
 	free2(nump);
+	char* charp = malloc2(10000);
+	memset(charp, 1, 10000);
+	printf("%p\n", charp);
+	char* charp0 = malloc2(5000);
+	free2(charp);
+	free2(charp0);
 	return 0;
 }
 
