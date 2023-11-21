@@ -221,6 +221,21 @@ void *realloc2(void *ptr, size_t size) {
 	return newalloc;
 }
 
+size_t malloc_usable_size(void *ptr) {
+	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
+	if(ptr == NULL) {
+		return 0;
+	}
+	
+	/* last node, use the program break(EOheap) */
+	if(node->next == NULL) {
+		return (size_t)(EOheap - aligned(node + nodesiz));
+	}
+	
+	/* in between nodes, use beggining of chunk */
+	return (size_t)((intptr_t)node->next - aligned(node + nodesiz));
+}
+
 int main(int argc, char *argv[]) {
 	// int* nump = malloc2(sizeof(int));
 	// printf("%p\n", nump);
