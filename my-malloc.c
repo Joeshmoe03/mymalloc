@@ -176,6 +176,8 @@ void free2(void* ptr) {
 }
 
 void *realloc2(void *ptr, size_t size) {
+	void *newalloc;
+	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	if(ptr == NULL) {
 		return malloc2(size);
 	}
@@ -183,28 +185,38 @@ void *realloc2(void *ptr, size_t size) {
 		free2(ptr);
 		return NULL;
 	}
-	
-	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
-	
-	/* new size < old size or last node */
-	if(size <= node->size || node->next == NULL) {
+
+	/* last node */
+	if(node->next == NULL) {
+		/*if our realloc tries to go beyond program break, copy case*/
+		if(aligned(node + nodesiz) + size > EOheap) {
+			newalloc = malloc2(size);
+			if(newalloc == NULL) {
+				return NULL;
+			}
+			memcpy(newalloc, ptr, node->size); //size?
+			free2(ptr);
+			return newalloc;
+		}
+
+		/* otherwise, extend case */
 		node->size = size;
 		return ptr;
 	}
 
-	/* adjacent memory is free, just "extend" old alloc */
-	if(((intptr_t)node->next - aligned((intptr_t)node + nodesiz) + node->size >= size - node->size)) {
+	/* adjacent memory is free, just "extend" or "shrink" old alloc */
+	if(((intptr_t)node->next - aligned((intptr_t)node + nodesiz) >= size)) {
 		node->size = size;
 		return ptr;
 	}
 
 	/* adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
-	void* newalloc = malloc2(size);
+	newalloc = malloc2(size);
 	/* if malloc fails, so will realloc */
 	if(newalloc == NULL) {
 		return NULL;
 	}
-	memcpy(newalloc, ptr, node->size);
+	memcpy(newalloc, ptr, node->size); //size?
 	free2(ptr);
 	return newalloc;
 }
