@@ -134,11 +134,16 @@ void *malloc2(size_t size) {
 	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
+/* allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
 void *calloc2(size_t nmemb, size_t size) {
-	/* integer overflow case */
-
-	/* allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
 	size_t sizeneeded = nmemb * size;
+
+	/* integer overflow case */
+	if(__builtin_mul_overflow(nmemb, size, &sizeneeded)) {
+		return NULL;
+		//set errno?
+		printf("this works?!");
+	}
 	nodep node = (nodep)((size_t)malloc2(sizeneeded) - aligned(nodesiz)); 
 
 	/* The memory is set to zero */
@@ -155,6 +160,7 @@ void *calloc2(size_t nmemb, size_t size) {
 void free2(void* ptr) {
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	if(ptr != NULL){
+
 		/* find node-> prev (should get us to previous node), update that previous node's next pointer to whatever node->nxt is */
 		if(node->prev != NULL) {
 			node->prev->next = node->next;
@@ -174,27 +180,27 @@ void *realloc2(void *ptr, size_t size) {
 	if(ptr == NULL) {
 		malloc2(size);
 	}
-	if(size == 0) { //implied: && ptr != NULL
+	if(size == 0) {
 		free2(ptr);
 	}
 	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
 	
-	/* Case 1: new size < old size */
+	/* new size < old size */
 	if(size < node->size) {
 		node->size = size;
 		return ptr;
 	}
 
-	/* Case 2: new size > old size */
+	/* new size > old size */
 
-	/* Case 2a: adjacent memory is free, just "extend" old alloc */
+	/* adjacent memory is free, just "extend" old alloc */
 	if(((intptr_t)node->next - aligned(aligned((intptr_t)node + nodesiz) + node->size) > aligned(size - node->size))) { //CHECK CALC.
 		node->size = size;
 		return ptr;
 	}
 
-	/* Case 2b: adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
-	void* newalloc = malloc2(size);
+	/* adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
+	void* newalloc = malloc2(size); //TODO: do null checking all in one line
 	memcpy(newalloc, ptr, node->size);
 	free2(ptr);
 	return newalloc;
@@ -212,7 +218,7 @@ int main(int argc, char *argv[]) {
 	// free2(charp);
 	// free2(charp0);
 	
-	//int* a = (int*)calloc2(4,sizeof(int));
+	int* a = (int*)calloc2(4,sizeof(int));
 	//a[0] = 1;
 	//a[1] = 2;
 	//a[2] = 3;
@@ -228,15 +234,14 @@ int main(int argc, char *argv[]) {
 	strcpy(letters, "HAHA");
 	strcpy(letters2, "nooo");
 	/* same addres for some reason */
-	printf("%d\n", letters);
-	printf("%d\n", letters2);
-	// letters = realloc2(letters, 1000);
-	// strcpy(letters, "HAHAHAHAHA");
+	printf("%p\n", letters);
+	printf("%p\n", letters2);
+	letters = realloc2(letters, 1000); //maybe works, compiler seems to indicate so, but only when using malloc()
+	strcpy(letters, "HAHAHAHAHA");
 
 	
-	//printf("%s\n", letters);
-	//printf("%s\n", letters2);
+	printf("%s\n", letters);
+	printf("%s\n", letters2);
 
 	return 0;
 }
-
