@@ -57,7 +57,7 @@ nodep createnode(nodep oldnode, nodep newnode, size_t size) {
  * to the allocated memory.  The memory is not initialized.  If size
  * is 0, then malloc() returns a unique pointer value that can later
  * be successfully passed to free(). */
-void *malloc2(size_t size) {
+void *malloc(size_t size) {
 	intptr_t heapspace;
 	nodep newnode;
 	intptr_t sbrkval;
@@ -135,14 +135,14 @@ void *malloc2(size_t size) {
 }
 
 /* allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
-void *calloc2(size_t nmemb, size_t size) {
+void *calloc(size_t nmemb, size_t size) {
 	size_t sizeneeded = nmemb * size;
 
 	/* integer overflow case */
 	if(__builtin_mul_overflow(nmemb, size, &sizeneeded)) {
 		return NULL;
 	}
-	void *newalloc = malloc2(sizeneeded);
+	void *newalloc = malloc(sizeneeded);
 
 	/* if malloc fails, so will calloc */
 	if(newalloc == NULL) {
@@ -156,7 +156,7 @@ void *calloc2(size_t nmemb, size_t size) {
 	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
-void free2(void* ptr) {
+void free(void* ptr) {
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	if(ptr != NULL){
 
@@ -175,14 +175,14 @@ void free2(void* ptr) {
 	return;
 }
 
-void *realloc2(void *ptr, size_t size) {
+void *realloc(void *ptr, size_t size) {
 	void *newalloc;
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	if(ptr == NULL) {
-		return malloc2(size);
+		return malloc(size);
 	}
 	if(size == 0) {
-		free2(ptr);
+		free(ptr);
 		return NULL;
 	}
 
@@ -190,12 +190,12 @@ void *realloc2(void *ptr, size_t size) {
 	if(node->next == NULL) {
 		/*if our realloc tries to go beyond program break, copy case*/
 		if(aligned((intptr_t)node + nodesiz) + size > EOheap) {
-			newalloc = malloc2(size);
+			newalloc = malloc(size);
 			if(newalloc == NULL) {
 				return NULL;
 			}
 			memcpy(newalloc, ptr, node->size); //size?
-			free2(ptr);
+			free(ptr);
 			return newalloc;
 		}
 
@@ -211,13 +211,13 @@ void *realloc2(void *ptr, size_t size) {
 	}
 
 	/* adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
-	newalloc = malloc2(size);
+	newalloc = malloc(size);
 	/* if malloc fails, so will realloc */
 	if(newalloc == NULL) {
 		return NULL;
 	}
 	memcpy(newalloc, ptr, node->size); //size?
-	free2(ptr);
+	free(ptr);
 	return newalloc;
 }
 
@@ -237,16 +237,16 @@ size_t malloc_usable_size(void *ptr) {
 }
 
 // int main(int argc, char *argv[]) {
-// 	// int* nump = malloc2(sizeof(int));
+// 	// int* nump = malloc(sizeof(int));
 // 	// printf("%p\n", nump);
 // 	// *nump = 11023912;
-// 	// free2(nump);
-// 	// char* charp = malloc2(10000);
+// 	// free(nump);
+// 	// char* charp = malloc(10000);
 // 	// memset(charp, 1, 10000);
 // 	// printf("%p\n", charp);
-// 	// char* charp0 = malloc2(5000);
-// 	// free2(charp);
-// 	// free2(charp0);
+// 	// char* charp0 = malloc(5000);
+// 	// free(charp);
+// 	// free(charp0);
 	
 // 	int* a = (int*)calloc2(4,sizeof(int));
 // 	a[0] = 1;
