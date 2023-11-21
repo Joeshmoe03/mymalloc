@@ -186,16 +186,14 @@ void *realloc2(void *ptr, size_t size) {
 	
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
 	
-	/* new size < old size */
-	if(size <= node->size && size != 0) {
+	/* new size < old size or last node */
+	if(size <= node->size || node->next == NULL) {
 		node->size = size;
 		return ptr;
 	}
 
-	/* new size > old size */
-
 	/* adjacent memory is free, just "extend" old alloc */
-	if(((intptr_t)node->next - aligned(aligned((intptr_t)node + nodesiz) + node->size) > aligned(size - node->size))) { //CHECK CALC.
+	if(((intptr_t)node->next - aligned((intptr_t)node + nodesiz) + node->size >= size - node->size)) {
 		node->size = size;
 		return ptr;
 	}
@@ -230,7 +228,7 @@ int main(int argc, char *argv[]) {
 	a[3] = 4;
 	printf("The numbers entered are: ");
    	for(int i = 0 ; i < 4 ; i++ ) {
-     //printf("%d\n", a[i]);
+     printf("%d\n", a[i]);
     }
 
 	/* being overwritten weird */
