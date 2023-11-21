@@ -133,33 +133,74 @@ void *malloc2(size_t size) {
 	return (void*)aligned((intptr_t)node + nodesiz);
 }
 
+void *calloc2(size_t nmemb, size_t size) {
+	/* integer overflow case */
+
+	/*allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
+	size_t sizeneeded = nmemb * size;
+	nodep node = (nodep)((size_t)malloc(sizeneeded) - aligned(nodesiz)); 
+
+	/* The memory is set to zero */
+	memset(node, 0, node->size);
+
+	return node;
+}
+
+// void *realloc2(void *ptr, size_t size) {
+// 	if(ptr == NULL) {
+// 		malloc2(size);
+// 	}
+
+// 	if(size == 0) { //implied: && ptr != NULL
+// 		free2(ptr);
+// 	}
+
+// 	nodep node = (nodep)((size_t)(ptr) - aligned(nodesiz));
+// 	//should call malloc(size);
+
+// 	//start->old unchanged, use memset for this? gotta copy
+// 	memset()
+
+// }
+
 void free2(void* ptr) {
-	/* find ptr-> prev (should get us to previous node), update that previous node's next pointer to whatever ptr-> nxt is */
 	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
-	if(node->prev != NULL) {
-		node->prev->next = node->next;
-	} else {
-		head = NULL;
-	}
-	
-	/* find ptr->next (should get ums to next node), updated that next node's prev pointer to whatever ptr->prev is */
-	if(node->next != NULL) {
-		node->next->prev = node->prev;
+	if(ptr != NULL){
+		/* find node-> prev (should get us to previous node), update that previous node's next pointer to whatever node->nxt is */
+		if(node->prev != NULL) {
+			node->prev->next = node->next;
+		} else {
+			head = NULL;
+		}
+		
+		/* find node->next (should get us to next node), updated that next node's prev pointer to whatever node->prev is */
+		if(node->next != NULL) {
+			node->next->prev = node->prev;
+		}
 	}
 	return;
 }
 
 int main(int argc, char *argv[]) {
-	int* nump = malloc2(sizeof(int));
-	printf("%p\n", nump);
-	*nump = 11023912;
-	free2(nump);
-	char* charp = malloc2(10000);
-	memset(charp, 1, 10000);
-	printf("%p\n", charp);
-	char* charp0 = malloc2(5000);
-	free2(charp);
-	free2(charp0);
+	// int* nump = malloc2(sizeof(int));
+	// printf("%p\n", nump);
+	// *nump = 11023912;
+	// free2(nump);
+	// char* charp = malloc2(10000);
+	// memset(charp, 1, 10000);
+	// printf("%p\n", charp);
+	// char* charp0 = malloc2(5000);
+	// free2(charp);
+	// free2(charp0);
+	int* a = (int*)calloc2(4,sizeof(int));
+	a[0] = 1;
+	a[1] = 2;
+	a[2] = 3;
+	a[3] = 4;
+	printf("The numbers entered are: ");
+   	for(int i = 0 ; i < 4 ; i++ ) {
+      printf("%d", a[i]);
+    }
 	return 0;
 }
 
