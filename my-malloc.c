@@ -217,12 +217,23 @@ int main(int argc, char *argv[]) {
 	a[3] = 4;
 	printf("The numbers entered are: ");
    	for(int i = 0 ; i < 4 ; i++ ) {
-      printf("%d", a[i]);
+      printf("%d\n", a[i]);
     }
 
-	char* letters = malloc2(5);
-	letters = realloc2(letters, 10);
+	/* being overwritten weird */
+	char* letters = malloc2(5); 
+	char* letters2 = malloc2(100);
+	strcpy(letters, "HAHA");
+	strcpy(letters2, "nooo");
+	/* same addres for some reason */
 	printf("%p\n", letters);
+	printf("%p\n", letters2);
+	// letters = realloc2(letters, 1000);
+	// strcpy(letters, "HAHAHAHAHA");
+
+	
+	printf("%s\n", letters);
+	printf("%s\n", letters2);
 
 	return 0;
 }
