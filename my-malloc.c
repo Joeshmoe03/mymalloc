@@ -236,42 +236,42 @@ size_t malloc_usable_size(void *ptr) {
 	return (size_t)((intptr_t)node->next - aligned((intptr_t)node + nodesiz));
 }
 
-int main(int argc, char *argv[]) {
-	// int* nump = malloc2(sizeof(int));
-	// printf("%p\n", nump);
-	// *nump = 11023912;
-	// free2(nump);
-	// char* charp = malloc2(10000);
-	// memset(charp, 1, 10000);
-	// printf("%p\n", charp);
-	// char* charp0 = malloc2(5000);
-	// free2(charp);
-	// free2(charp0);
+// int main(int argc, char *argv[]) {
+// 	// int* nump = malloc2(sizeof(int));
+// 	// printf("%p\n", nump);
+// 	// *nump = 11023912;
+// 	// free2(nump);
+// 	// char* charp = malloc2(10000);
+// 	// memset(charp, 1, 10000);
+// 	// printf("%p\n", charp);
+// 	// char* charp0 = malloc2(5000);
+// 	// free2(charp);
+// 	// free2(charp0);
 	
-	int* a = (int*)calloc2(4,sizeof(int));
-	a[0] = 1;
-	a[1] = 2;
-	a[2] = 3;
-	a[3] = 4;
-	printf("The numbers entered are: ");
-   	for(int i = 0 ; i < 4 ; i++ ) {
-     printf("%d\n", a[i]);
-    }
+// 	int* a = (int*)calloc2(4,sizeof(int));
+// 	a[0] = 1;
+// 	a[1] = 2;
+// 	a[2] = 3;
+// 	a[3] = 4;
+// 	printf("The numbers entered are: ");
+//    	for(int i = 0 ; i < 4 ; i++ ) {
+//      printf("%d\n", a[i]);
+//     }
 
-	/* being overwritten weird */
-	char* letters = malloc2(5); 
-	char* letters2 = malloc2(100);
-	strcpy(letters, "HAHA");
-	strcpy(letters2, "nooo");
-	/* same addres for some reason */
-	printf("%p\n", letters);
-	printf("%p\n", letters2);
-	letters = realloc2(letters, 1000); //maybe works, compiler seems to indicate so, but only when using malloc()
-	strcpy(letters, "HAHAHAHAHA");
+// 	/* being overwritten weird */
+// 	char* letters = malloc(5); 
+// 	char* letters2 = malloc(100);
+// 	strcpy(letters, "HAHA");
+// 	strcpy(letters2, "nooo");
+// 	/* same addres for some reason */
+// 	printf("%p\n", letters);
+// 	printf("%p\n", letters2);
+// 	letters = realloc2(letters, 1000); //maybe works, compiler seems to indicate so, but only when using malloc()
+// 	strcpy(letters, "HAHAHAHAHA");
 
 	
-	printf("%s\n", letters);
-	printf("%s\n", letters2);
+// 	printf("%s\n", letters);
+// 	printf("%s\n", letters2);
 
-	return 0;
-}
+// 	return 0;
+// }
