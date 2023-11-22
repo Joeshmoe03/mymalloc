@@ -31,12 +31,12 @@ intptr_t align(intptr_t n) {
 }
 
 /* Generic function for creating node and updating node metadata */
-void createnode(nodep oldnode, nodep newnode, nodep nextnode, size_t size) {
+void createnode(nodep prevnode, nodep newnode, nodep nextnode, size_t size) {
 	newnode->size = size;
-	newnode->prev = oldnode;
+	newnode->prev = prevnode;
 	newnode->next = nextnode;
-	if(oldnode != NULL) {
-		oldnode->next = newnode;
+	if(prevnode != NULL) {
+		prevnode->next = newnode;
 	}
 	if(nextnode != NULL) {
 		nextnode->prev = newnode;
