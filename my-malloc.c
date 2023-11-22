@@ -28,7 +28,7 @@ static intptr_t nodesiz = (intptr_t)sizeof(struct alloc);
 
 /* Information about our heap size, and future var for tracking end of heap */
 static intptr_t heapsiz = 2048;
-static intptr_t EOheap;
+static void* EOheap;
 
 /* SEE: `http://dmitrysoshnikov.com/compilers/writing-a-memory-allocator */
 intptr_t aligned(intptr_t n) {
@@ -37,18 +37,19 @@ intptr_t aligned(intptr_t n) {
 }
 
 /* generic function for creating node and updating node metadata */
-nodep createnode(nodep oldnode, nodep newnode, size_t size) {
+nodep createnode(nodep oldnode, nodep newnode, nodep nextnode, size_t size) {
 	newnode->size = size;
+	
+	newnode->prev = oldnode;
+	newnode->next = nextnode;
+	
+	/* Case for when either head node is being created for first time
+ 	* or we are adding a new node n nodes after the head */
 	if(oldnode != NULL) {
-		newnode->prev = oldnode;
-		newnode->next = oldnode->next;
 		oldnode->next = newnode;
-		if(newnode->next != NULL) {
-			newnode->next->prev = newnode;
-		}
-	} else {
-		newnode->prev = NULL;
-		newnode->next = NULL;
+	}
+	if(nextnode != NULL) {
+		nextnode->prev = newnode;
 	}
 	return newnode;
 }
@@ -59,8 +60,8 @@ nodep createnode(nodep oldnode, nodep newnode, size_t size) {
  * be successfully passed to free(). */
 void *malloc(size_t size) {
 	intptr_t heapspace;
-	nodep newnode;
 	intptr_t sbrkval;
+	nodep newnode;
 
 	/* We start at our head of the DLL */
 	nodep node = head;
@@ -70,68 +71,65 @@ void *malloc(size_t size) {
 				
 		/* If is our first time using malloc */
 		if(heapstart == NULL) {
-			sbrkval = (intptr_t)sbrk(aligned(heapsiz));
+			if(heapsiz < size) {
+				heapsiz = size * 2;
+			}
+			sbrkval = (intptr_t)sbrk(heapsiz); //aligned?
 			if(sbrkval < 0) {
 				return NULL;
 			}
 			heapstart = (void*)aligned(sbrkval);
 		}
-
-		/* If heapsiz is smaller than what I want to malloc, increase it */
-		if(heapsiz < size) {
-			sbrkval = (intptr_t)sbrk(aligned(size));
-			if(sbrkval < 0) {
-				return NULL;
-			}
-			sbrkval = (intptr_t)sbrk(0);
-			heapsiz = (intptr_t)sbrkval;	
-		}
 		
 		/* Create the node and set the node metadata */
-		node = (nodep)aligned((intptr_t)heapstart);
-		node = createnode(NULL, node, size);
-		head = node;
-
-		/* Calculate the end of the brk */
-		EOheap = aligned((intptr_t)sbrk(0));
+		newnode = (nodep)aligned((intptr_t)heapstart);
+		newnode = createnode(NULL, newnode, NULL, size);
+		head = newnode;
+		EOheap = sbrk(0);
 	
 		/* Return the aligned address at which alloc'd stuff is */
-		return (void*)(aligned((intptr_t)node + nodesiz));
+		return (void*)(aligned((intptr_t)newnode + nodesiz));
+	}
+
+	/* Can shove before head node? */
+	else if((intptr_t)head - (intptr_t)heapstart >= aligned(aligned(nodesiz) + size)) {
+		newnode = (nodep)heapstart;
+		newnode = createnode(NULL, newnode, head, size);
+		head = newnode;
+		return (void*)(aligned((intptr_t)newnode + nodesiz));
 	}
 
 	/* We already have some thing malloc'd so lets just traverse the DLL until we find next available spot */
 	while(node->next != NULL) {
 		heapspace = (intptr_t)node->next - aligned(aligned((intptr_t)node + nodesiz) + node->size);
-		if(heapspace >= aligned(nodesiz) + aligned((intptr_t)size)) {
+		if(heapspace >= aligned(aligned(nodesiz) + size)) {
 
 			/* Create node and metadata if can fit it in */
 			newnode = (nodep)aligned(aligned((intptr_t)node + nodesiz) + node->size);
-			newnode = createnode(node, newnode, size);
-			node = newnode;
-			return (void*)aligned((intptr_t)node + nodesiz);
+			newnode = createnode(node, newnode, node->next, size);
+			return (void*)aligned((intptr_t)newnode + nodesiz);
 		}
 		node = node->next;
 	}
-	heapspace = EOheap - aligned(aligned((intptr_t)node + nodesiz) + node->size);
+	heapspace = (intptr_t)EOheap - aligned(aligned((intptr_t)node + nodesiz) + node->size);
 		
 	/* If there is enough space after last node to shove before brk and fill metadata of node */
-	if(heapspace >= (aligned(nodesiz) + aligned(size))) {
+	if(heapspace >= aligned(aligned(nodesiz) + size)) {
 		newnode = (nodep)aligned(aligned((intptr_t)node + nodesiz) + node->size);
-		newnode = createnode(node, newnode, size);
-		node = newnode;
-		return (void*)aligned((intptr_t)node + nodesiz);
+		newnode = createnode(node, newnode, node->next, size);
+		return (void*)aligned((intptr_t)newnode + nodesiz);
 	}
 
 	/* increment brk by current sbrksiz + size * 2, and fill metadata */
 	heapsiz = (heapsiz + size) * 2;
-	sbrkval = (intptr_t)sbrk(aligned(heapsiz));
+	sbrkval = (intptr_t)sbrk(heapsiz); //aligned?
 	if(sbrkval < 0) {
 		return NULL;
 	}
+	EOheap = sbrk(0);
 	newnode = (nodep)aligned(sbrkval);
-	newnode = createnode(node, newnode, size);
-	node = newnode;
-	return (void*)aligned((intptr_t)node + nodesiz);
+	newnode = createnode(node, newnode, node->next, size);
+	return (void*)aligned((intptr_t)newnode + nodesiz);
 }
 
 /* allocates memory for an array of nmemb elements of size bytes each and returns a pointer to the allocated memory */
@@ -157,19 +155,19 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void free(void* ptr) {
-	nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
-	if(ptr != NULL){
+	if(ptr != NULL) {
+		nodep node = (nodep)((intptr_t)(ptr) - aligned(nodesiz));
+		
+		/* find node->next (should get us to next node), updated that next node's prev pointer to whatever node->prev is */
+		if(node->next != NULL /*&& node < node->next*/) {
+			node->next->prev = node->prev;
+		}
 
 		/* find node-> prev (should get us to previous node), update that previous node's next pointer to whatever node->nxt is */
 		if(node->prev != NULL) {
 			node->prev->next = node->next;
 		} else {
-			head = NULL;
-		}
-		
-		/* find node->next (should get us to next node), updated that next node's prev pointer to whatever node->prev is */
-		if(node->next != NULL) {
-			node->next->prev = node->prev;
+			head = node->next;
 		}
 	}
 	return;
@@ -188,13 +186,14 @@ void *realloc(void *ptr, size_t size) {
 
 	/* last node */
 	if(node->next == NULL) {
+
 		/*if our realloc tries to go beyond program break, copy case*/
-		if(aligned((intptr_t)node + nodesiz) + size > EOheap) {
+		if(aligned((intptr_t)node + nodesiz) + size > (intptr_t)EOheap) {
 			newalloc = malloc(size);
 			if(newalloc == NULL) {
 				return NULL;
 			}
-			memcpy(newalloc, ptr, node->size); //size?
+			memcpy(newalloc, ptr, size); //node-size?
 			free(ptr);
 			return newalloc;
 		}
@@ -212,11 +211,12 @@ void *realloc(void *ptr, size_t size) {
 
 	/* adjacent memory is not free, new malloc of necessary size, copy content from old malloc over to new malloc, free old malloc */
 	newalloc = malloc(size);
+
 	/* if malloc fails, so will realloc */
 	if(newalloc == NULL) {
 		return NULL;
 	}
-	memcpy(newalloc, ptr, node->size); //size?
+	memcpy(newalloc, ptr, size); //node-size?
 	free(ptr);
 	return newalloc;
 }
@@ -229,49 +229,9 @@ size_t malloc_usable_size(void *ptr) {
 
 	/* last node, use the program break(EOheap) */
 	if(node->next == NULL) {
-		return (size_t)(EOheap - aligned((intptr_t)node + nodesiz));
+		return (size_t)((intptr_t)EOheap - aligned((intptr_t)node + nodesiz));
 	}
 	
 	/* in between nodes, use beggining of chunk */
 	return (size_t)((intptr_t)node->next - aligned((intptr_t)node + nodesiz));
 }
-
-// int main(int argc, char *argv[]) {
-// 	// int* nump = malloc(sizeof(int));
-// 	// printf("%p\n", nump);
-// 	// *nump = 11023912;
-// 	// free(nump);
-// 	// char* charp = malloc(10000);
-// 	// memset(charp, 1, 10000);
-// 	// printf("%p\n", charp);
-// 	// char* charp0 = malloc(5000);
-// 	// free(charp);
-// 	// free(charp0);
-	
-// 	int* a = (int*)calloc2(4,sizeof(int));
-// 	a[0] = 1;
-// 	a[1] = 2;
-// 	a[2] = 3;
-// 	a[3] = 4;
-// 	printf("The numbers entered are: ");
-//    	for(int i = 0 ; i < 4 ; i++ ) {
-//      printf("%d\n", a[i]);
-//     }
-
-// 	/* being overwritten weird */
-// 	char* letters = malloc(5); 
-// 	char* letters2 = malloc(100);
-// 	strcpy(letters, "HAHA");
-// 	strcpy(letters2, "nooo");
-// 	/* same addres for some reason */
-// 	printf("%p\n", letters);
-// 	printf("%p\n", letters2);
-// 	letters = realloc2(letters, 1000); //maybe works, compiler seems to indicate so, but only when using malloc()
-// 	strcpy(letters, "HAHAHAHAHA");
-
-	
-// 	printf("%s\n", letters);
-// 	printf("%s\n", letters2);
-
-// 	return 0;
-// }
