@@ -7,13 +7,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-
-/* Our node struct holding info on next and prev alloc */
-typedef struct alloc {
-	size_t size;	
-	struct alloc *prev;
-	struct alloc *next;
-} *nodep;
+#include "my-malloc.h"
 
 /* Node information for DLL */
 static nodep head = NULL;
@@ -171,7 +165,7 @@ void *realloc(void *ptr, size_t size) {
 	/* last node */
 	if(node->next == NULL) {
 
-		/*if our realloc tries to go beyond program break, copy case*/
+		/* if our realloc tries to go beyond program break, copy case */
 		if(align((intptr_t)node + nodesiz) + size > (intptr_t)heapend) {
 			newalloc = malloc(size);
 			if(newalloc == NULL) {
